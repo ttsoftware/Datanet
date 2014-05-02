@@ -1,0 +1,31 @@
+traceroute to mirrors.ocf.berkeley.edu (169.229.172.84), 30 hops max, 60 byte packets
+ 1  192.168.18.1 (192.168.18.1)  4.506 ms  4.212 ms  4.149 ms
+ 2  gw.distlab.diku.dk (192.38.109.129)  4.170 ms  4.240 ms  4.312 ms
+ 3  130.226.237.106 (130.226.237.106)  6.155 ms  6.299 ms  6.344 ms
+ 4  172.20.2.92 (172.20.2.92)  6.513 ms  6.701 ms  7.028 ms
+ 5  172.20.2.1 (172.20.2.1)  7.092 ms  7.236 ms  7.414 ms
+ 6  10g-kua.or0.core.fsknet.dk (130.226.249.40)  6.587 ms  84.662 ms  3.105 ms
+ 7  dk-ore.nordu.net (109.105.102.41)  8.874 ms  8.961 ms  8.810 ms
+ 8  us-man.nordu.net (109.105.97.69)  111.168 ms  111.444 ms  111.802 ms
+ 9  xe-2-3-0.118.rtr.newy32aoa.net.internet2.edu (109.105.98.10)  112.004 ms  112.238 ms  112.505 ms
+10  et-3-0-0.101.rtr.wash.net.internet2.edu (198.71.45.1)  113.216 ms  113.451 ms  113.928 ms
+11  et-5-0-0.104.rtr.atla.net.internet2.edu (198.71.45.6)  134.261 ms  134.592 ms  134.836 ms
+12  et-1-0-0.105.rtr.hous.net.internet2.edu (198.71.45.13)  164.040 ms  421.865 ms  204.811 ms
+13  hpr-lax-hpr2--i2-houston.cenic.net (137.164.26.204)  204.900 ms  205.228 ms  205.713 ms
+14  svl-hpr2--lax-hpr2-10g-2.cenic.net (137.164.25.50)  208.715 ms  209.396 ms svl-hpr2--lax-hpr2-10g.cenic.net (137.164.25.38)  208.993 ms
+15  hpr-ucb--svl-hpr-10g.cenic.net (137.164.27.133)  205.924 ms  206.339 ms  206.638 ms
+16  t1-3.inr-202-reccev.Berkeley.EDU (128.32.0.67)  375.919 ms t1-3.inr-201-sut.Berkeley.EDU (128.32.0.65)  375.908 ms t1-3.inr-202-reccev.Berkeley.EDU (128.32.0.67)  376.016 ms
+17  t5-4.inr-330-spr.Berkeley.EDU (128.32.0.221)  376.103 ms  376.228 ms t6-4.inr-330-spr.Berkeley.EDU (128.32.0.223)  376.280 ms
+18  * * *
+19  * * *
+20  * * *
+21  * * *
+22  * * *
+23  * * *
+24  * * *
+25  * * *
+26  * * *
+27  * * *
+28  * * *
+29  * * *
+30  * * *

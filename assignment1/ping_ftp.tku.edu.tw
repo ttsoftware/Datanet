@@ -1,0 +1,8 @@
+PING ftp.tku.edu.tw (163.13.240.201) 56(84) bytes of data.
+64 bytes from ftp.tku.edu.tw (163.13.240.201): icmp_seq=1 ttl=44 time=388 ms
+64 bytes from ftp.tku.edu.tw (163.13.240.201): icmp_seq=3 ttl=44 time=484 ms
+64 bytes from ftp.tku.edu.tw (163.13.240.201): icmp_seq=4 ttl=44 time=533 ms
+
+--- ftp.tku.edu.tw ping statistics ---
+5 packets transmitted, 3 received, 40% packet loss, time 8566ms
+rtt min/avg/max/mdev = 388.223/468.886/533.666/60.432 ms

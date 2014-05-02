@@ -1,0 +1,18 @@
+traceroute to ftp.dk.debian.org (137.226.34.42), 30 hops max, 60 byte packets
+ 1  192.168.18.1 (192.168.18.1)  4.121 ms  4.024 ms  3.938 ms
+ 2  gw.distlab.diku.dk (192.38.109.129)  3.914 ms  3.807 ms  3.809 ms
+ 3  130.226.237.106 (130.226.237.106)  4.074 ms  4.384 ms  4.399 ms
+ 4  172.20.2.92 (172.20.2.92)  4.958 ms  5.699 ms  6.029 ms
+ 5  172.20.2.1 (172.20.2.1)  6.325 ms  8.805 ms  9.126 ms
+ 6  10g-kua.or0.core.fsknet.dk (130.226.249.40)  6.701 ms  91.286 ms  4.416 ms
+ 7  dk-ore.nordu.net (109.105.102.41)  4.172 ms  4.137 ms  4.239 ms
+ 8  nl-sar.nordu.net (109.105.97.25)  17.058 ms  17.269 ms  17.399 ms
+ 9  62.40.125.205 (62.40.125.205)  16.275 ms  16.345 ms  16.503 ms
+10  dfn-bckp-gw.mx1.ams.nl.geant.net (62.40.112.146)  30.547 ms  30.733 ms  30.889 ms
+11  cr-han1-hundredgige0-6-0-0-7.x-win.dfn.de (188.1.144.189)  36.185 ms  36.547 ms  38.733 ms
+12  kr-aac18-4.x-win.dfn.de (188.1.242.98)  39.450 ms  45.942 ms  46.091 ms
+13  * * kr-aac18-4.x-win.dfn.de (188.1.242.98)  109.821 ms
+14  * stone-xwin-pfo-4.noc.rwth-aachen.de (134.130.9.229)  108.968 ms  109.340 ms
+15  * * n7k-lssnord-1-vl109.noc.rwth-aachen.de (134.130.9.252)  104.206 ms
+16  c6k-rz-1-te2-1-1.noc.rwth-aachen.de (137.226.139.26)  101.425 ms * *
+17  ftp.halifax.rwth-aachen.de (137.226.34.42)  101.798 ms  102.171 ms  102.495 ms
