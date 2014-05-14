@@ -2,15 +2,16 @@ import os
 from webserver.Options import Options
 from webserver.filesystem.Filesystem import Filesystem
 from webserver.protocol.Communication import Communication
-from webserver.protocol.HttpCommand import HttpCommand
+from webserver.protocol.HttpRequest import HttpRequest
 
 
-class HttpGet(HttpCommand):
+class HttpGet(HttpRequest):
 
     def __init__(self, match, csock):
 
         filename = match.group(2)
-        if filename is None:  # directory index requested
+        filetype = match.group(3)
+        if filename is None or filetype is None:  # directory index requested
             filename = "index.html"
             if Filesystem.file_exists(filename):  # we look for index.html
                 self.serve_file(filename, csock)

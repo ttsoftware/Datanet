@@ -3,7 +3,7 @@ from webserver.filesystem.Filesystem import Filesystem
 from webserver.protocol.Communication import Communication
 
 
-class HttpCommand:
+class HttpRequest:
 
     def serve_file(self, filename, csock):
         exists = Filesystem.file_exists(filename)
