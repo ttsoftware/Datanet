@@ -1,7 +1,7 @@
 from webserver.Options import Options
 
 
-class Protocol:
+class Communication:
 
     @staticmethod
     def reply_dir(csock, files):
