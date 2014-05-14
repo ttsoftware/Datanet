@@ -1,7 +1,6 @@
-import os
 import socket
 import re
-from webserver.protocol.Protocol import Protocol
+from webserver.protocol.HttpGet import HttpGet
 
 
 class HttpServer:
@@ -26,31 +25,15 @@ class HttpServer:
 
     def handle_request(self, csock):
         request = csock.recv(8192)  # returns request headers. (no more than 8kb)
+        match = re.match("(\w+)\s/([\w\d/]+(\.\w+)?)?\sHTTP/1", request)
 
-        if request is None:
+        if match is None:  # something wierd happened?
             return
 
-        match = re.match('(\w+)\s/([\w\d/]+(\.\w+)?)?\sHTTP/1', request)
         request_type = match.group(1).upper()
 
         if request_type == "GET":
-            filename = match.group(2)
-
-            root_dir = "/var/www/"
-            files = os.listdir(root_dir)
-
-            if filename is None:
-                Protocol.reply_dir(csock, files)
-                return
-
-            for sysfile in files:
-                if sysfile == filename:
-                    with open(root_dir + sysfile, 'r') as fhandle:
-                        Protocol.reply_200(csock, fhandle.read())
-                        return
-
-            Protocol.reply_404(csock)
-
+            HttpGet(match, csock)
         elif request_type == "POST":
             return
         elif request_type == "HEAD":
