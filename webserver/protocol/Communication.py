@@ -6,7 +6,7 @@ class Communication:
     @staticmethod
     def reply_dir(csock, files):
 
-        with open(Options.root_dir + "standard/list_dir.html", 'r') as fhandle:
+        with open(Options.root_dir + "/standard/list_dir.html", 'r') as fhandle:
             content = fhandle.read()
 
         content = content.replace("%elements%", '<br/>'.join(files))
@@ -25,7 +25,7 @@ class Communication:
 
     @staticmethod
     def reply_404(csock):
-        with open(Options.root_dir + "standard/404.html", 'r') as fhandle:
+        with open(Options.root_dir + "/standard/404.html", 'r') as fhandle:
             content = fhandle.read()
         csock.sendall("""HTTP/1.1 404 Not Found
                          Content-Type: text/html

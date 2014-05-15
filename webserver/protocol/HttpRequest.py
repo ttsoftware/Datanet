@@ -5,10 +5,10 @@ from webserver.protocol.Communication import Communication
 
 class HttpRequest:
 
-    def serve_file(self, filename, csock):
-        exists = Filesystem.file_exists(filename)
+    def serve_file(self, filepath, filename, csock):
+        exists = Filesystem.file_exists(filepath, filename)
         if exists:
-            with open(Options.root_dir + filename, 'r') as fhandle:
+            with open(Options.root_dir + filepath + filename, 'r') as fhandle:
                 Communication.reply_200(csock, fhandle.read())
         else:
             Communication.reply_404(csock)

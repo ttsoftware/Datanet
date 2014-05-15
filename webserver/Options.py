@@ -2,4 +2,4 @@
 
 class Options:
 
-    root_dir = "/var/www/"
+    root_dir = "/var/www"
