@@ -1,6 +1,6 @@
 from webserver.Options import Options
 from webserver.filesystem.Filesystem import Filesystem
-from webserver.protocol.Communication import Communication
+from webserver.protocol.Response import Response
 
 
 class HttpRequest:
@@ -9,6 +9,6 @@ class HttpRequest:
         exists = Filesystem.file_exists(filepath, filename)
         if exists:
             with open(Options.root_dir + filepath + filename, 'r') as fhandle:
-                Communication.reply_200(csock, fhandle.read())
+                Response.reply_200(csock, fhandle.read())
         else:
-            Communication.reply_404(csock)
+            Response.reply_404(csock)

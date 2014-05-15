@@ -1,7 +1,7 @@
 import os
 from webserver.Options import Options
 from webserver.filesystem.Filesystem import Filesystem
-from webserver.protocol.Communication import Communication
+from webserver.protocol.Response import Response
 from webserver.protocol.HttpRequest import HttpRequest
 
 
@@ -24,6 +24,6 @@ class HttpGet(HttpRequest):
                 self.serve_file(filepath, filename, csock)
             else:  # no index file, so we serve directory listing
                 files = os.listdir(Options.root_dir)
-                Communication.reply_dir(csock, files)
+                Response.reply_dir(csock, files)
         else:  # a file was specified, so we serve it.
             self.serve_file(filepath, filename, csock)
