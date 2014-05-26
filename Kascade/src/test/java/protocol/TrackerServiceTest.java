@@ -13,7 +13,7 @@ public class TrackerServiceTest {
         int port = 6666;
         String host = "http://datanet2014tracker.appspot.com/peers/";
         String resource = "4ad2b83af9573f2074e70ead5b23e9dea1786b4293e6726f88b8e34f1b4a8942.json";
-        String resourcePaths = "/var/www/shared";
+        String resourcePaths = "/var/www/shared/";
 
         KascadeFile file = new KascadeFile(
             host + resource,
