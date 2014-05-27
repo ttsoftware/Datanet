@@ -11,9 +11,9 @@ public class KascadeFile {
     protected String filehash;
     protected int filesize;
 
-    protected int blockcount;
+    protected String blocks = "";
     protected int blocksize;
-    protected HashMap<Boolean, String> blockhashes;
+    protected HashMap<String, Boolean> blockhashes;
 
     public KascadeFile(String trackerUrl, String filepath, String filename, String filehash, int filesize, int blocksize) {
         this.trackerUrl = trackerUrl;
@@ -22,9 +22,12 @@ public class KascadeFile {
         this.filehash = filehash;
         this.filesize = filesize;
         this.blocksize = blocksize;
-        this.blockhashes = new HashMap<Boolean, String>();
 
-        this.blockcount = 0;
+        this.blockhashes = new HashMap<String, Boolean>();
+
+        for (int i = 0; i < (((filesize/blocksize) + 7)/8)*2; i++) {
+            this.blocks += "0";
+        }
     }
 
     public String getFilepath() {
@@ -75,19 +78,19 @@ public class KascadeFile {
         this.trackerUrl = trackerUrl;
     }
 
-    public HashMap<Boolean, String> getBlockhashes() {
+    public HashMap<String, Boolean> getBlockhashes() {
         return blockhashes;
     }
 
-    public void setBlockhashes(HashMap<Boolean, String> blockhashes) {
+    public void setBlockhashes(HashMap<String, Boolean> blockhashes) {
         this.blockhashes = blockhashes;
     }
 
-    public int getBlockcount() {
-        return blockcount;
+    public String getBlocks() {
+        return blocks;
     }
 
-    public void setBlockcount(int blockcount) {
-        this.blockcount = blockcount;
+    public void setBlocks(String blocks) {
+        this.blocks = blocks;
     }
 }

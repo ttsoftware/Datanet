@@ -26,7 +26,7 @@ public class KascadeParserService {
         return files;
     }
 
-    public void fileToKascade(String fileName) {
+    public void fileToKascade(String fileName) throws FileNotFoundException {
         for (File file : arrayOfKascadeFiles()) {
             BufferedReader reader = new BufferedReader(new FileReader(this.path + file.getName()));
 
