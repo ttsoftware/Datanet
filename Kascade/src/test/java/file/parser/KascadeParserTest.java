@@ -10,12 +10,16 @@ public class KascadeParserTest {
     @Test
     public void testKascadeFileArray() {
 
-        KascadeParser kascadeReader = new KascadeParser();
+        KascadeParser kascadeParser = new KascadeParser("/var/www/shared/kascades");
 
-        File[] arrayKascade = kascadeReader.arrayOfKascadeFiles("/var/www/shared/kascades");
+        File[] actualKascades = kascadeParser.arrayOfKascadeFiles();
 
-        for(File file : arrayKascade) {
-            System.out.println(file.getName());
-        }
+    }
+
+    @Test
+    public void testKascadeConversion() {
+
+        KascadeParser kascadeParser = new KascadeParser("/var/www/shared/kascades");
+
     }
 }

@@ -1,22 +1,52 @@
 package file.parser;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
+import file.KascadeFile;
 
+import java.io.*;
+import java.util.*;
 
 public class KascadeParser {
 
-    public File[] arrayOfKascadeFiles(String path) {
+    private String path;
+
+    public KascadeParser(String path) {
+        this.path = path;
+    }
+
+    public File[] arrayOfKascadeFiles() {
         List<String> results = new ArrayList<String>();
-        File[] files = new File(path).listFiles();
+        File[] files = new File(this.path).listFiles();
 
         for (File file : files) {
-            if (file.isFile()) {
+            if (file.isFile() && file.getName().endsWith(".kascade")) {
                 results.add(file.getName());
             }
         }
 
         return files;
     }
+
+    public void fileToKascade(String fileName) throws FileNotFoundException {
+        for (File file : arrayOfKascadeFiles()) {
+            BufferedReader reader = new BufferedReader(new FileReader(this.path + file.getName()));
+
+            String trackerUrl = null;
+            String filepath = null;
+            String filename = null;
+            String filehash = null;
+            int filesize = 0;
+            int blocksize = 0;
+
+            String line = null;
+
+            KascadeFile kascFile = new KascadeFile(trackerUrl,
+                                                   filepath,
+                                                   filename,
+                                                   filehash,
+                                                   filesize,
+                                                   blocksize);
+        }
+    }
+
+
 }
