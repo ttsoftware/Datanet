@@ -1,11 +1,11 @@
-package file.converter;
+package file.parser;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 
-public class KascadeParserService {
+public class KascadeParser {
 
     public File[] arrayOfKascadeFiles(String path) {
         List<String> results = new ArrayList<String>();

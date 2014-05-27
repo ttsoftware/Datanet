@@ -1,19 +1,22 @@
 package file;
 
+import java.io.UnsupportedEncodingException;
+import java.math.BigInteger;
 import java.util.HashMap;
+import java.util.Map;
 
 public class KascadeFile {
 
-    protected String trackerUrl;
+    private String trackerUrl;
 
-    protected String filepath;
-    protected String filename;
-    protected String filehash;
-    protected int filesize;
+    private String filepath;
+    private String filename;
+    private String filehash;
+    private int filesize;
 
-    protected String blocks = "";
-    protected int blocksize;
-    protected HashMap<String, Boolean> blockhashes;
+    private String blocks = "";
+    private int blocksize;
+    private String[] blockhashes;
 
     public KascadeFile(String trackerUrl, String filepath, String filename, String filehash, int filesize, int blocksize) {
         this.trackerUrl = trackerUrl;
@@ -23,11 +26,18 @@ public class KascadeFile {
         this.filesize = filesize;
         this.blocksize = blocksize;
 
-        this.blockhashes = new HashMap<String, Boolean>();
-
         for (int i = 0; i < (((filesize/blocksize) + 7)/8)*2; i++) {
             this.blocks += "0";
         }
+    }
+
+    public String updateBlocks() throws UnsupportedEncodingException {
+
+        String blocks = "";
+        blocks = String.format("%040x", new BigInteger(1, blocks.getBytes("UTF-8")));
+
+        setBlocks(blocks);
+        return getBlocks();
     }
 
     public String getFilepath() {
@@ -78,11 +88,11 @@ public class KascadeFile {
         this.trackerUrl = trackerUrl;
     }
 
-    public HashMap<String, Boolean> getBlockhashes() {
+    public String[] getBlockhashes() {
         return blockhashes;
     }
 
-    public void setBlockhashes(HashMap<String, Boolean> blockhashes) {
+    public void setBlockhashes(String[] blockhashes) {
         this.blockhashes = blockhashes;
     }
 

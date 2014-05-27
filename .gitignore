@@ -1,4 +1,6 @@
 .idea/
+.idea/*
 pubform/
 *.pdf
 Kascade/.idea/
+Kascade/.idea/*
