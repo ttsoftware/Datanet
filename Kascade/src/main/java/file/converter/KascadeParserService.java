@@ -1,18 +1,24 @@
 package file.converter;
 
+import file.KascadeFile;
+
 import java.io.*;
 import java.util.*;
-/**
- * Created by Troels L. & Allan on 5/26/14.
- */
+
 public class KascadeParserService {
 
-    public File[] arrayOfKascadeFiles(String path) {
+    private String path;
+
+    public KascadeParserService(String path) {
+        this.path = path;
+    }
+
+    public File[] arrayOfKascadeFiles() {
         List<String> results = new ArrayList<String>();
-        File[] files = new File(path).listFiles();
+        File[] files = new File(this.path).listFiles();
 
         for (File file : files) {
-            if (file.isFile()) {
+            if (file.isFile() && file.getName().endsWith(".kascade")) {
                 results.add(file.getName());
             }
         }
@@ -20,6 +26,27 @@ public class KascadeParserService {
         return files;
     }
 
+    public void fileToKascade(String fileName) {
+        for (File file : arrayOfKascadeFiles()) {
+            BufferedReader reader = new BufferedReader(new FileReader(this.path + file.getName()));
+
+            String trackerUrl = null;
+            String filepath = null;
+            String filename = null;
+            String filehash = null;
+            int filesize = 0;
+            int blocksize = 0;
+
+            String line = null;
+
+            KascadeFile kascFile = new KascadeFile(trackerUrl,
+                                                   filepath,
+                                                   filename,
+                                                   filehash,
+                                                   filesize,
+                                                   blocksize);
+        }
+    }
 
 
 }

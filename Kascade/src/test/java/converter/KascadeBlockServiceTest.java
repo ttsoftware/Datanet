@@ -5,25 +5,27 @@ import org.junit.Test;
 
 import java.io.File;
 
-/**
- * Created by arahlon on 5/26/14.
- */
 public class KascadeBlockServiceTest {
 
     @Test
     public void testKascadeFileArray() {
 
-        KascadeParserService kascadeReader = new KascadeParserService();
+        KascadeParserService kascadeParser = new KascadeParserService();
 
-        File[] arrayKascade = kascadeReader.arrayOfKascadeFiles("/var/home/kascades");
-        System.out.println(" We begin \n");
+        File[] actualKascades = kascadeParser.arrayOfKascadeFiles("/var/www/kascades");
+        File[] expectedKascades = kascadeParser.arrayOfKascadeFiles("/home/arahlon/Desktop/Uni/Datanet/Kascade/src/test/java/testFiles/kascadeExpected");
 
-        for(File kascFile : arrayKascade) {
-            System.out.println(kascFile.getName());
+        for(int i = 0; i == actualKascades.length; i++) {
+            assert (expectedKascades[i].getName() == actualKascades[i].getName());
         }
-        System.out.println("We finish \n");
 
     }
 
+    @Test
+    public void testKascadeConversion() {
+
+        KascadeParserService kascadeParser = new KascadeParserService();
+
+    }
 
 }
