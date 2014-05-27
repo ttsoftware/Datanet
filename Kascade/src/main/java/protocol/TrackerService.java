@@ -5,8 +5,12 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import file.KascadeFile;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.type.TypeReference;
 
-import java.io.UnsupportedEncodingException;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 public class TrackerService {
@@ -17,29 +21,29 @@ public class TrackerService {
         this.port = port;
     }
 
-    public String getKascadeJSON(KascadeFile kascadeFile) throws UnsupportedEncodingException {
+    public ArrayList<Peer> getPeers(KascadeFile kascadeFile) throws IOException {
+
+        String input = "port=" + Integer.toString(getPort()) + "&blocks=" + kascadeFile.getBlocks();
 
         Client client = Client.create();
-
-        String blocks = "";
-        for (int i = 0; i != 86; i++) {
-            blocks += "0";
-        }
-
-        String input = "port=6666&blocks=" + blocks;
 
         WebResource webResource = client.resource(kascadeFile.getTrackerUrl());
         ClientResponse response = webResource.type("application/x-www-form-urlencoded").post(ClientResponse.class, input);
 
+        String responseBody = response.getEntity(String.class);
+
         Map headers = response.getHeaders();
-
-        System.out.println(response.getStatus());
-
+        String headerString = "";
         for (Object header : headers.keySet()) {
-            System.out.println(header + " : " + headers.get(header));
+            headerString += "\n" + header + " : " + headers.get(header);
         }
 
-        return response.getEntity(String.class);
+        if (response.getStatus() != 200) {
+            throw new RuntimeException("HTTP status: " + response.getStatus() + "\n" + headerString + "\n" + responseBody);
+        }
+
+        ObjectMapper mapper = new ObjectMapper();
+        return mapper.readValue(responseBody, new TypeReference<List<Peer>>(){});
     }
 
     public int getPort() {
