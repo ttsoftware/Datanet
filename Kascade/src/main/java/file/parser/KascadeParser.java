@@ -1,8 +1,13 @@
 package file.parser;
 
 import file.KascadeFile;
+import org.codehaus.jackson.JsonParseException;
+import org.codehaus.jackson.map.ObjectMapper;
+import org.codehaus.jackson.type.TypeReference;
+import protocol.Peer;
 
 import java.io.*;
+import java.lang.reflect.Array;
 import java.util.*;
 
 public class KascadeParser {
@@ -13,40 +18,39 @@ public class KascadeParser {
         this.path = path;
     }
 
-    public File[] arrayOfKascadeFiles() {
-        List<String> results = new ArrayList<String>();
-        File[] files = new File(this.path).listFiles();
+    public ArrayList<KascadeFile> getFiles() throws IOException {
+        ArrayList<KascadeFile> files = new ArrayList<KascadeFile>();
 
-        for (File file : files) {
-            if (file.isFile() && file.getName().endsWith(".kascade")) {
-                results.add(file.getName());
-            }
+        for (File file : arrayOfKascadeFiles()) {
+            files.add(fileToKascade(file.getAbsolutePath()));
         }
 
         return files;
     }
 
-    public void fileToKascade(String fileName) throws FileNotFoundException {
-        for (File file : arrayOfKascadeFiles()) {
-            BufferedReader reader = new BufferedReader(new FileReader(this.path + file.getName()));
+    public ArrayList<File> arrayOfKascadeFiles() {
+        ArrayList<File> results = new ArrayList<File>();
+        File[] files = new File(getPath()).listFiles();
 
-            String trackerUrl = null;
-            String filepath = null;
-            String filename = null;
-            String filehash = null;
-            int filesize = 0;
-            int blocksize = 0;
-
-            String line = null;
-
-            KascadeFile kascFile = new KascadeFile(trackerUrl,
-                                                   filepath,
-                                                   filename,
-                                                   filehash,
-                                                   filesize,
-                                                   blocksize);
+        for (File file : files) {
+            if (file.isFile() && file.getName().endsWith(".kascade")) {
+                results.add(file);
+            }
         }
+
+        return results;
     }
 
+    public KascadeFile fileToKascade(String filepath) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        return mapper.readValue(new File(filepath), KascadeFile.class);
+    }
 
+    public String getPath() {
+        return path;
+    }
+
+    public void setPath(String path) {
+        this.path = path;
+    }
 }

@@ -2,12 +2,11 @@ package file;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
-import java.util.HashMap;
-import java.util.Map;
 
 public class KascadeFile {
 
-    private String trackerUrl;
+    private String tracker;
+    private String trackhash;
 
     private String filepath;
     private String filename;
@@ -18,8 +17,11 @@ public class KascadeFile {
     private int blocksize;
     private String[] blockhashes;
 
-    public KascadeFile(String trackerUrl, String filepath, String filename, String filehash, int filesize, int blocksize) {
-        this.trackerUrl = trackerUrl;
+    public KascadeFile() {
+    }
+
+    public KascadeFile(String tracker, String filepath, String filename, String filehash, int filesize, int blocksize) {
+        this.tracker = tracker;
         this.filepath = filepath;
         this.filename = filename;
         this.filehash = filehash;
@@ -38,6 +40,14 @@ public class KascadeFile {
 
         setBlocks(blocks);
         return getBlocks();
+    }
+
+    public String getTrackhash() {
+        return trackhash;
+    }
+
+    public void setTrackhash(String trackhash) {
+        this.trackhash = trackhash;
     }
 
     public String getFilepath() {
@@ -80,12 +90,12 @@ public class KascadeFile {
         this.blocksize = blocksize;
     }
 
-    public String getTrackerUrl() {
-        return trackerUrl;
+    public String getTracker() {
+        return tracker;
     }
 
-    public void setTrackerUrl(String trackerUrl) {
-        this.trackerUrl = trackerUrl;
+    public void setTracker(String tracker) {
+        this.tracker = tracker;
     }
 
     public String[] getBlockhashes() {

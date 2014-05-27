@@ -4,3 +4,5 @@ pubform/
 *.pdf
 Kascade/.idea
 Kascade/.idea/*
+Kascade/target
+Kascade/target/*

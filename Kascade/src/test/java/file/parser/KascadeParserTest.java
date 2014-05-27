@@ -1,8 +1,11 @@
 package file.parser;
 
+import file.KascadeFile;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
 
 
 public class KascadeParserTest {
@@ -12,14 +15,19 @@ public class KascadeParserTest {
 
         KascadeParser kascadeParser = new KascadeParser("/var/www/shared/kascades");
 
-        File[] actualKascades = kascadeParser.arrayOfKascadeFiles();
+        ArrayList<File> actualKascades = kascadeParser.arrayOfKascadeFiles();
 
     }
 
     @Test
-    public void testKascadeConversion() {
+    public void testKascadeConversion() throws IOException {
 
         KascadeParser kascadeParser = new KascadeParser("/var/www/shared/kascades");
 
+        ArrayList<KascadeFile> files = kascadeParser.getFiles();
+
+        for (KascadeFile file : files) {
+            System.out.println(file.getFilehash());
+        }
     }
 }

@@ -27,7 +27,7 @@ public class TrackerService {
 
         Client client = Client.create();
 
-        WebResource webResource = client.resource(kascadeFile.getTrackerUrl());
+        WebResource webResource = client.resource(kascadeFile.getTracker());
         ClientResponse response = webResource.type("application/x-www-form-urlencoded").post(ClientResponse.class, input);
 
         String responseBody = response.getEntity(String.class);
