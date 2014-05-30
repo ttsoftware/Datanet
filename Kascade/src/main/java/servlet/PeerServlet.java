@@ -1,41 +1,59 @@
 package servlet;
-import com.sun.net.httpserver.HttpServer;
-import com.sun.jersey.api.container.httpserver.HttpServerFactory;
 import file.KascadeFile;
 import file.parser.KascadeParser;
+import org.apache.commons.io.IOUtils;
 
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.*;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.Response;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.Produces;
-import javax.ws.rs.Path;
-
 // The Java class will be hosted at the URI path "/helloworld"
-@Path("/")
+@Path("/{trackhash}")
 public class PeerServlet {
 
     @GET
     @Produces("application/octet-stream")
-    public byte[] responseBlock() {
+    public Response responseBlock(@PathParam("trackhash") String trackhash,
+                                @HeaderParam("Range") String range)
+            throws IOException {
 
-        /*
-        KascadeParser kascadeParser = new KascadeParser("/var/www/shared/kascades");
-        ArrayList<KascadeFile> files = kascadeParser.getFiles();         */
+        String[] ranges = range.substring(6).split("-");
+        int rangeMin = Integer.parseInt(ranges[0]);
+        int rangeMax = Integer.parseInt(ranges[1]);
 
-        return "Hello World".getBytes();
-    }
+        File[] files = new File("/var/www/shared/hashes").listFiles();
 
-    public static void main(String[] args) throws IOException {
-        HttpServer server = HttpServerFactory.create("http://localhost:9998/");
-        server.start();
+        for (File file : files) {
+            if (file.isDirectory() && file.getName().equals(trackhash)) {
 
-        System.out.println("Server running");
-        System.out.println("Visit: http://localhost:9998/");
-        System.out.println("Hit return to stop...");
-        System.in.read();
-        System.out.println("Stopping server");
-        server.stop(0);
-        System.out.println("Server stopped");
+                KascadeParser kascadeParser = new KascadeParser("/var/www/shared/kascades");
+                ArrayList<KascadeFile> kascadeFiles = kascadeParser.getFiles();
+
+                for (KascadeFile kascadeFile : kascadeFiles) {
+                    if (kascadeFile.getTrackhash().equals(file.getName())) {
+                        int blocksize = kascadeFile.getBlocksize();
+
+                        if (blocksize == (rangeMax - rangeMin)+1) {
+                            int blockIndex = rangeMin / blocksize;
+                            String blockFilename = kascadeFile.getBlockhashes()[blockIndex];
+
+                            File blockFile = new File("/var/www/shared/hashes/" + file.getName() + "/" + blockFilename);
+                            if (blockFile.exists()) {
+
+                                FileInputStream inputStream = new FileInputStream(blockFile);
+                                return Response.status(206).entity(IOUtils.toByteArray(inputStream)).build();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return Response.status(404).entity("404 - file not found.".getBytes()).build();
     }
 }

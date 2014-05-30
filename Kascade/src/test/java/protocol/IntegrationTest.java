@@ -24,6 +24,6 @@ public class IntegrationTest {
 
         PeerService peerService = new PeerService();
         peerService.downloadBlocks(peers, file);
-        //file.assemble();
+        file.assemble();
     }
 }
