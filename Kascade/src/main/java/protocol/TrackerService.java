@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static java.lang.Thread.sleep;
+
 public class TrackerService {
 
     private int port;
@@ -21,7 +23,7 @@ public class TrackerService {
         this.port = port;
     }
 
-    public ArrayList<Peer> getPeers(KascadeFile kascadeFile) throws IOException {
+    public ArrayList<Peer> getPeers(KascadeFile kascadeFile) throws IOException, InterruptedException {
 
         String input = "port=" + Integer.toString(getPort()) + "&blocks=" + kascadeFile.getBlocks();
 
@@ -38,8 +40,14 @@ public class TrackerService {
             headerString += "\n" + header + " : " + headers.get(header);
         }
 
-        if (response.getStatus() != 200) {
-            throw new RuntimeException("HTTP status: " + response.getStatus() + "\n" + headerString + "\n" + responseBody);
+        switch (response.getStatus()) {
+            case 403:
+                sleep(60);
+                break;
+            case 200:
+                break;
+            default:
+                throw new RuntimeException("HTTP status: " + response.getStatus() + "\n" + headerString + "\n" + responseBody);
         }
 
         ObjectMapper mapper = new ObjectMapper();

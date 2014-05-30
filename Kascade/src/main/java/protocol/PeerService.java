@@ -1,30 +1,82 @@
 package protocol;
 
 import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.WebResource;
 import file.KascadeFile;
+import org.apache.commons.io.IOUtils;
 
+import java.io.*;
+import java.math.BigInteger;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 
 public class PeerService {
 
-    public String getBlock(Peer peer, KascadeFile file, String blockhash) {
+    public boolean validateBlock(byte[] blockcontent, String blockhash) throws NoSuchAlgorithmException, UnsupportedEncodingException {
 
-        String resource = "http://" + peer.getIp() + ":" + peer.getPort() + "/" + file.getFilehash();
+        MessageDigest md = MessageDigest.getInstance("MD5");
+        byte[] hashbytes = md.digest(blockcontent);
+
+        BigInteger hashBits = new BigInteger(1, hashbytes);
+        String hashtext = hashBits.toString(16);
+        while (hashtext.length() < 32) { // prefix with 0's to ensure correct length
+            hashtext = "0"+hashtext;
+        }
+
+        return blockhash.equals(hashtext);
+    }
+
+    public void downloadBlocks(ArrayList<Peer> peers, KascadeFile file) throws IOException, NoSuchAlgorithmException {
+
+        for (Peer peer : peers) {
+            HashMap<String, Integer> peerBlockStartingBytes = peer.decodeBlocks(file);
+
+            for (Map.Entry<String, Integer> blockEntry : peerBlockStartingBytes.entrySet()) {
+
+                byte[] blockContent = downloadBlock(peer, file, blockEntry.getValue());
+
+                if (validateBlock(blockContent, blockEntry.getKey())) {
+
+                    FileOutputStream outputStream = new FileOutputStream("/var/www/shared/hashes/" + file.getTrackhash() + "/" + blockEntry.getKey());
+                    outputStream.write(blockContent);
+                    outputStream.close();
+                }
+            }
+        }
+    }
+
+    public byte[] downloadBlock(Peer peer, KascadeFile file, int startByte) throws IOException {
+
+        String resource = "http://" + peer.getIp() + ":" + peer.getPort() + "/" + file.getTrackhash();
 
         Client client = Client.create();
         WebResource webResource = client.resource(resource);
 
-        int range = file.getBlocksize() - 1;
-        ClientResponse response = webResource
-                .header("Range", "bytes=0-" + Integer.toString(range))
-                .type("text/plain")
-                .get(ClientResponse.class);
+        int endByte = startByte + file.getBlocksize() - 1;
+        if (endByte >= file.getFilesize()) {
+            endByte = file.getFilesize() - 1;
+        }
 
-        System.out.println(range);
+        ClientResponse response;
+        try {
+            response = webResource
+                    .header("Range", "bytes=" + Integer.toString(startByte) + "-" + Integer.toString(endByte))
+                    .type("text/plain")
+                    .get(ClientResponse.class);
+        }
+        catch (ClientHandlerException e) {
+            throw new RuntimeException("\nRange: " + Integer.toString(startByte) + "-" + Integer.toString(endByte) +
+                                       "\nGET " + resource + " HTTP 1.1");
+        }
 
-        String responseBody = response.getEntity(String.class);
+        InputStream inputStream = response.getEntityInputStream();
+        byte[] blockByteArray = IOUtils.toByteArray(inputStream);
 
         Map headers = response.getHeaders();
         String headerString = "";
@@ -32,10 +84,14 @@ public class PeerService {
             headerString += "\n" + header + " : " + headers.get(header);
         }
 
-        if (response.getStatus() != 200) {
-            throw new RuntimeException("\nGET " + resource + " HTTP 1.1: " + response.getStatus() + headerString + "\n" + responseBody);
+        switch (response.getStatus()) {
+            case 206:
+                // recieved block succesfully.
+                return blockByteArray;
+            default:
+                throw new RuntimeException("\nRange: " + Integer.toString(startByte) + "-" + Integer.toString(endByte) +
+                                           "\nGET " + resource + " HTTP 1.1: " +
+                                           response.getStatus() + headerString);
         }
-
-        return responseBody;
     }
 }
