@@ -1,4 +1,4 @@
-package protocol;
+package client;
 
 import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
@@ -12,7 +12,6 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -37,20 +36,23 @@ public class PeerService {
         for (Peer peer : peers) {
             HashMap<String, Integer> peerBlockStartingBytes = peer.decodeBlocks(file);
 
-            System.out.println("Trying " + peerBlockStartingBytes.size() + " blocks from peer " + peer.getIp() + ":" + peer.getPort());
+            if (peerBlockStartingBytes.size() > 0) {
 
-            for (Map.Entry<String, Integer> blockEntry : peerBlockStartingBytes.entrySet()) {
+                System.out.println("Trying " + peerBlockStartingBytes.size() + " blocks from peer " + peer.getIp() + ":" + peer.getPort());
 
-                byte[] blockContent = downloadBlock(peer, file, blockEntry.getValue());
+                for (Map.Entry<String, Integer> blockEntry : peerBlockStartingBytes.entrySet()) {
 
-                if (blockContent.length > 0
-                    && validateBlock(blockContent, blockEntry.getKey())) {
+                    byte[] blockContent = downloadBlock(peer, file, blockEntry.getValue());
 
-                    System.out.println("\tRecieved block " + blockEntry.getKey());
+                    if (blockContent.length > 0
+                        && validateBlock(blockContent, blockEntry.getKey())) {
 
-                    FileOutputStream outputStream = new FileOutputStream("/var/www/shared/hashes/" + file.getTrackhash() + "/" + blockEntry.getKey());
-                    outputStream.write(blockContent);
-                    outputStream.close();
+                        System.out.println("\tRecieved block " + blockEntry.getKey());
+
+                        FileOutputStream outputStream = new FileOutputStream("/var/www/shared/hashes/" + file.getTrackhash() + "/" + blockEntry.getKey());
+                        outputStream.write(blockContent);
+                        outputStream.close();
+                    }
                 }
             }
         }
@@ -97,6 +99,9 @@ public class PeerService {
             case 206:
                 // recieved block succesfully.
                 return blockByteArray;
+            case 400:
+                // block not found, try next peer.
+                return new byte[]{};
             default:
                 throw new RuntimeException("\nRange: " + Integer.toString(startByte) + "-" + Integer.toString(endByte) +
                                            "\nGET " + resource + " HTTP 1.1: " +

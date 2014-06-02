@@ -1,13 +1,9 @@
 package file.parser;
 
 import file.KascadeFile;
-import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.type.TypeReference;
-import protocol.Peer;
 
 import java.io.*;
-import java.lang.reflect.Array;
 import java.util.*;
 
 public class KascadeParser {

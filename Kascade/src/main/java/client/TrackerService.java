@@ -1,4 +1,4 @@
-package protocol;
+package client;
 
 
 import com.sun.jersey.api.client.Client;

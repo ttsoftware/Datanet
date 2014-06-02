@@ -1,14 +1,16 @@
 import file.KascadeFile;
 import file.parser.KascadeParser;
-import protocol.Peer;
+import client.Peer;
+import client.KascadeFileDownloader;
 import servlet.PeerListener;
-import protocol.PeerService;
-import protocol.TrackerService;
+import client.TrackerService;
 
 import java.io.File;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Date;
 
 public class Main {
 
@@ -17,7 +19,7 @@ public class Main {
     public static void main(String[] args) throws IOException, NoSuchAlgorithmException, InterruptedException {
 
         Thread listeningThread = new Thread(new PeerListener(port));
-        listeningThread.start();
+        //listeningThread.start();
 
         download();
     }
@@ -29,7 +31,8 @@ public class Main {
 
         for (KascadeFile file : files) {
 
-            System.out.println("Downloading file:" + file.getFilename());
+            Timestamp time = new Timestamp(new Date().getTime());
+            System.out.println(time + ": Downloading file:" + file.getFilename());
 
             File directory = new File("/var/www/shared/hashes/" + file.getTrackhash());
 
@@ -52,13 +55,8 @@ public class Main {
 
             System.out.println("Found " + peers.size() + " peers.");
 
-            PeerService peerService = new PeerService();
-            peerService.downloadBlocks(peers, file);
-            boolean success = file.assemble();
-
-            if (success) {
-                System.out.println("File " + file.getFilename() + " succesfully downloaded.");
-            }
+            Thread downloadThread = new Thread(new KascadeFileDownloader(peers, file));
+            downloadThread.start();
         }
     }
 }

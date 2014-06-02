@@ -1,18 +1,10 @@
 package file;
 
 import file.parser.KascadeParser;
-import org.apache.commons.io.IOUtils;
 import org.junit.Test;
-import protocol.Peer;
-import protocol.PeerService;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import static org.junit.Assert.*;
 
