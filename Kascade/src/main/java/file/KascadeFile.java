@@ -172,7 +172,9 @@ public class KascadeFile {
         for (int i = 0; i < bytecount; i++) {
             String blockString = "";
             for (int j = 0; j < 8; j++) {
-                blockString += blocks[i + j];
+                if ((i + j) < blockcount) {
+                    blockString += blocks[i + j];
+                }
             }
 
             String hexVal = Integer.toHexString(Integer.valueOf(blockString, 2));
