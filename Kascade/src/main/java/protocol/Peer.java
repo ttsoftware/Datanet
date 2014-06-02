@@ -39,7 +39,15 @@ public class Peer {
             }
         }
 
-        blockString = blockString.substring(0, blockcount); // remove trailing 0's
+        if (blockString.length() > blockcount) {
+            blockString = blockString.substring(0, blockcount); // remove trailing 0's
+        }
+        else {
+            // append trailing 0's
+            while (blockString.length() < blockcount) {
+                blockString += "0";
+            }
+        }
 
         char[] peerBlocks = blockString.toCharArray();
         char[] existingBlocks = file.getBinaryBlocks().toCharArray();

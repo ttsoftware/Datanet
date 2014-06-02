@@ -76,7 +76,8 @@ public class PeerService {
                     .get(ClientResponse.class);
         }
         catch (ClientHandlerException e) {
-            if (e.getCause().getMessage().equals("Connection timed out")) {
+            if (e.getCause().getMessage().equals("Connection timed out")
+                    || e.getCause().getMessage().equals("Invalid Http response")) {
                 return new byte[]{}; // try next block/peer.
             }
             e.printStackTrace();
