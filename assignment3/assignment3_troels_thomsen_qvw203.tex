@@ -88,8 +88,25 @@ We will see however, that our chosen structure is ideal for future improvement.
 
 \keywords{Java, HTTP, request, response, socket, TCP, header, peer} 
 
-\section{Webserver design}
-This sections describes the simply http server implementation.
+\section{Theory}
 
+\subsection{TCP as a choice for tracker communication}
+We do not want to risk loosing any data transmitted by the tracker, and for this reason alone TCP is preferred since it guarantees data correctness.
+
+The communication with the tracker is also done in small bursts over time, and thus the nature of UDP would not add any benefits for the client.
+
+One could argue that a large tracker with thousands or millions of peers would benefit from using UDP, since each request would have much less overhead. In our case however, we feel that the correctness of data is more important.
+
+\subsection{HTTP as a choice for tracker communication}
+The amount of communication between the tracker and the client is relatively small. We only use the tracker for finding the peers associated with a given file. This means that the amount of traffic is limited to the initial POST request, and the occasional PUT request, when the peer updates its block string. Because of the small number of requests, we do not consider the overhead generally associated with HTTP a problem.
+
+Futhermore the HTTP protocol is widely known and supported, and is thus much easier to implement in almost any language, since there exists countless HTTP libraries. 
+
+Because of these two factors, there is no obvious reason to to choose HTTP.
+
+\section{Experiments}
+In the following experiments we will uncover the effectiveness of the kascade network.
+
+\subsection{•}
 
 \end{document}

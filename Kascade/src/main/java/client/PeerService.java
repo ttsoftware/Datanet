@@ -9,6 +9,7 @@ import org.apache.commons.io.IOUtils;
 
 import java.io.*;
 import java.math.BigInteger;
+import java.net.ConnectException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
@@ -42,10 +43,16 @@ public class PeerService {
 
                 for (Map.Entry<String, Integer> blockEntry : peerBlockStartingBytes.entrySet()) {
 
-                    byte[] blockContent = downloadBlock(peer, file, blockEntry.getValue());
+                    byte[] blockContent = new byte[]{};
+                    try {
+                        downloadBlock(peer, file, blockEntry.getValue());
+                    }
+                    catch (ConnectException e) {
+                        System.out.println(e.getMessage());
+                        break; // try next peer
+                    }
 
-                    if (blockContent.length > 0
-                        && validateBlock(blockContent, blockEntry.getKey())) {
+                    if (blockContent.length > 0 && validateBlock(blockContent, blockEntry.getKey())) {
 
                         System.out.println("\tRecieved block " + blockEntry.getKey());
 
@@ -79,8 +86,9 @@ public class PeerService {
         }
         catch (ClientHandlerException e) {
             if (e.getCause().getMessage().equals("Connection timed out")
+                    || e.getCause().getMessage().equals("Connection refused")
                     || e.getCause().getMessage().equals("Invalid Http response")) {
-                return new byte[]{}; // try next block/peer.
+                throw new ConnectException("Could not connect to " + resource);
             }
             e.printStackTrace();
             throw new RuntimeException("\nRange: " + Integer.toString(startByte) + "-" + Integer.toString(endByte) + "\nGET " + resource + " HTTP 1.1");
