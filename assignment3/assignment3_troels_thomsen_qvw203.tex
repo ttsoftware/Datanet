@@ -97,12 +97,21 @@ The communication with the tracker is also done in small bursts over time, and t
 
 One could argue that a large tracker with thousands or millions of peers would benefit from using UDP, since each request would have much less overhead. In our case however, we feel that the correctness of data is more important.
 
+\subsection{TCP as a choice for peer communication}
+Like with our tracker communication, we highly value the correctness of the data transmitted. When we transmit a block of data from another peer, we need the entire block. 
+
+While we do check the MD5 hashsums of the received blocks, we would still risk re-requesting a lot of blocks, which would render any added speed-benefits from using UDP meaningless.
+Not re-requesting the data or simply not performing MD5-hashsum checks is not an option, since we would then end up with a corrupt file.
+
 \subsection{HTTP as a choice for tracker communication}
 The amount of communication between the tracker and the client is relatively small. We only use the tracker for finding the peers associated with a given file. This means that the amount of traffic is limited to the initial POST request, and the occasional PUT request, when the peer updates its block string. Because of the small number of requests, we do not consider the overhead generally associated with HTTP a problem.
 
 Futhermore the HTTP protocol is widely known and supported, and is thus much easier to implement in almost any language, since there exists countless HTTP libraries. 
 
 Because of these two factors, there is no obvious reason to to choose HTTP.
+
+\subsection{HTTP as a choice for peer communication}
+
 
 \section{Experiments}
 In the following experiments we will uncover the effectiveness of the kascade network.
