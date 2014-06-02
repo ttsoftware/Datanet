@@ -27,6 +27,8 @@ public class KascadeFileTest {
 
         String hexBlocks = file.getBlocks();
 
+        System.out.println(hexBlocks);
+
         assertEquals(hexBlocks.length(), (int)Math.ceil(file.getBlockhashes().length / 8.0)*2);
     }
 

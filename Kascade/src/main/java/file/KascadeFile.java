@@ -4,6 +4,7 @@ import org.apache.commons.io.IOUtils;
 
 import java.io.*;
 import java.math.BigInteger;
+import java.util.Arrays;
 
 import static org.junit.Assert.assertEquals;
 
@@ -171,12 +172,13 @@ public class KascadeFile {
             for (int j = 0; j < 8; j++) {
                 blockString += blocks[i + j];
             }
-            if (blockString.equals("00000000")) {
-                hexBlocks += "00";
+
+            String hexVal = Integer.toHexString(Integer.valueOf(blockString, 2));
+            if (hexVal.length() == 1) {
+                hexVal = "0" + hexVal;
             }
-            else {
-                hexBlocks += Integer.toHexString(Integer.valueOf(blockString, 2));
-            }
+
+            hexBlocks += hexVal;
         }
 
         return hexBlocks;

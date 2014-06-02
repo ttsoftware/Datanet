@@ -3,16 +3,13 @@ import file.KascadeFile;
 import file.parser.KascadeParser;
 import org.apache.commons.io.IOUtils;
 
-import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.*;
-import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 
-// The Java class will be hosted at the URI path "/helloworld"
 @Path("/{trackhash}")
 public class PeerServlet {
 
@@ -54,6 +51,6 @@ public class PeerServlet {
             }
         }
 
-        return Response.status(404).entity("404 - file not found.".getBytes()).build();
+        return Response.status(404).entity("404 - file not found.").build();
     }
 }

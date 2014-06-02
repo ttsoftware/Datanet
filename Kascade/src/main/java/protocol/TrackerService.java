@@ -47,7 +47,7 @@ public class TrackerService {
             case 200:
                 break;
             default:
-                throw new RuntimeException("HTTP status: " + response.getStatus() + "\n" + headerString + "\n" + responseBody);
+                throw new RuntimeException("\nInput: " + input + "\nHTTP status: " + response.getStatus() + "\n" + headerString + "\n" + responseBody);
         }
 
         ObjectMapper mapper = new ObjectMapper();

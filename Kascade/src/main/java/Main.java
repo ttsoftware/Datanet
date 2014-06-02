@@ -29,16 +29,28 @@ public class Main {
 
         for (KascadeFile file : files) {
 
+            System.out.println("Downloading file:" + file.getFilename());
+
             File directory = new File("/var/www/shared/hashes/" + file.getTrackhash());
 
             if (!directory.exists()) {
                 if (!directory.mkdir()) {
                     continue; // unable to create directory for blocks
                 }
+                if (directory.setReadable(true)) {
+                    if (!directory.setWritable(true)) {
+                        continue;
+                    }
+                }
+                else {
+                    continue;
+                }
             }
 
             TrackerService trackerService = new TrackerService(port);
             ArrayList<Peer> peers = trackerService.getPeers(file);
+
+            System.out.println("Found " + peers.size() + " peers.");
 
             PeerService peerService = new PeerService();
             peerService.downloadBlocks(peers, file);
