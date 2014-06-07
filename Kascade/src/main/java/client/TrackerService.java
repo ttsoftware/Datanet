@@ -1,13 +1,18 @@
 package client;
 
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import file.KascadeFile;
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.type.TypeReference;
+import org.glassfish.jersey.client.ClientProperties;
 
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
+import javax.ws.rs.core.Form;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -25,14 +30,18 @@ public class TrackerService {
 
     public ArrayList<Peer> getPeers(KascadeFile kascadeFile) throws IOException, InterruptedException {
 
-        String input = "port=" + Integer.toString(getPort()) + "&blocks=" + kascadeFile.getBlocks();
+        Client client = ClientBuilder.newClient();
 
-        Client client = Client.create();
+        Response response = client.target(kascadeFile.getTracker())
+                .request(MediaType.APPLICATION_JSON_TYPE)
+                .post(Entity.entity(
+                              new Form()
+                                      .param("port", Integer.toString(getPort()))
+                                      .param("blocks", kascadeFile.getBlocks()),
+                              MediaType.APPLICATION_FORM_URLENCODED_TYPE)
+                );
 
-        WebResource webResource = client.resource(kascadeFile.getTracker());
-        ClientResponse response = webResource.type("application/x-www-form-urlencoded").post(ClientResponse.class, input);
-
-        String responseBody = response.getEntity(String.class);
+        String responseBody = response.readEntity(String.class);
 
         Map headers = response.getHeaders();
         String headerString = "";
@@ -47,11 +56,17 @@ public class TrackerService {
             case 200:
                 break;
             default:
-                throw new RuntimeException("\nInput: " + input + "\nHTTP status: " + response.getStatus() + "\n" + headerString + "\n" + responseBody);
+                throw new RuntimeException("\nHTTP status: " + response.getStatus() + "\n" + headerString + "\n" + responseBody);
         }
 
         ObjectMapper mapper = new ObjectMapper();
-        return mapper.readValue(responseBody, new TypeReference<List<Peer>>(){});
+        try {
+            return mapper.readValue(responseBody, new TypeReference<List<Peer>>(){});
+        }
+        catch (JsonParseException e) {
+            System.out.println(responseBody);
+            throw e;
+        }
     }
 
     public int getPort() {

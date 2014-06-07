@@ -1,10 +1,11 @@
 package file.parser;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import file.KascadeFile;
-import org.codehaus.jackson.map.ObjectMapper;
 
-import java.io.*;
-import java.util.*;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
 
 public class KascadeParser {
 
@@ -18,7 +19,10 @@ public class KascadeParser {
         ArrayList<KascadeFile> files = new ArrayList<KascadeFile>();
 
         for (File file : arrayOfKascadeFiles()) {
-            files.add(fileToKascade(file.getAbsolutePath()));
+            KascadeFile fileObject = fileToKascade(file.getAbsolutePath());
+            if (fileObject instanceof KascadeFile) {
+                files.add(fileObject);
+            }
         }
 
         return files;
@@ -29,7 +33,7 @@ public class KascadeParser {
         File[] files = new File(getPath()).listFiles();
 
         for (File file : files) {
-            if (file.isFile() && file.getName().endsWith(".kascade")) {
+            if (file.getName().endsWith(".kascade")) {
                 results.add(file);
             }
         }
@@ -39,7 +43,12 @@ public class KascadeParser {
 
     public KascadeFile fileToKascade(String filepath) throws IOException {
         ObjectMapper mapper = new ObjectMapper();
-        return mapper.readValue(new File(filepath), KascadeFile.class);
+        try {
+            return mapper.readValue(new File(filepath), KascadeFile.class);
+        }
+        catch (IOException e) {
+            return null;
+        }
     }
 
     public String getPath() {

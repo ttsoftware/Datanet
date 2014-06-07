@@ -6,16 +6,23 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
 
-public class KascadeFileDownloader implements Runnable {
+public class PeerClient implements Runnable {
 
-    private ArrayList<Peer> peers;
+    private int port;
     private KascadeFile file;
 
     @Override
     public void run() {
-        PeerService peerService = new PeerService();
+
         try {
-            peerService.downloadBlocks(getPeers(), getFile());
+            TrackerService trackerService = new TrackerService(getPort());
+            ArrayList<Peer> peers = trackerService.getPeers(getFile());
+
+            System.out.println("Found " + peers.size() + " peers.");
+
+            PeerService peerService = new PeerService();
+            peerService.downloadBlocks(peers, getFile());
+
             boolean success = file.assemble();
             if (success) {
                 Timestamp time = new Timestamp(new Date().getTime());
@@ -27,17 +34,17 @@ public class KascadeFileDownloader implements Runnable {
         }
     }
 
-    public KascadeFileDownloader(ArrayList<Peer> peers, KascadeFile file) {
-        this.peers = peers;
+    public PeerClient(int port, KascadeFile file) {
+        this.port = port;
         this.file = file;
     }
 
-    public ArrayList<Peer> getPeers() {
-        return peers;
+    public int getPort() {
+        return port;
     }
 
-    public void setPeers(ArrayList<Peer> peers) {
-        this.peers = peers;
+    public void setPort(int port) {
+        this.port = port;
     }
 
     public KascadeFile getFile() {
