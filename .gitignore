@@ -8,3 +8,5 @@ Kascade/target
 Kascade/target/*
 Kascade/kascade-client.iml
 Kascade/kascade.iml
+WebDAV/.idea/*
+WebDAV/.idea
