@@ -1,13 +1,15 @@
 package client;
 
-import com.sun.jersey.api.client.Client;
-import com.sun.jersey.api.client.ClientHandlerException;
-import com.sun.jersey.api.client.ClientResponse;
-import com.sun.jersey.api.client.WebResource;
 import file.KascadeFile;
-import org.apache.commons.io.IOUtils;
+import org.glassfish.jersey.client.ClientProperties;
 
-import java.io.*;
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
 import java.net.ConnectException;
 import java.security.MessageDigest;
@@ -69,33 +71,26 @@ public class PeerService {
 
         String resource = "http://" + peer.getIp() + ":" + peer.getPort() + "/" + file.getTrackhash();
 
-        Client client = Client.create();
-        WebResource webResource = client.resource(resource);
+        Client client = ClientBuilder.newClient();
+        client.property(ClientProperties.CONNECT_TIMEOUT, 30000);
 
         int endByte = startByte + file.getBlocksize() - 1;
         if (endByte >= file.getFilesize()) {
             endByte = file.getFilesize() - 1;
         }
 
-        ClientResponse response;
+        Response response;
         try {
-            response = webResource
+            response = client.target(resource)
+                    .request(MediaType.APPLICATION_OCTET_STREAM_TYPE)
                     .header("Range", "bytes=" + Integer.toString(startByte) + "-" + Integer.toString(endByte))
-                    .type("text/plain")
-                    .get(ClientResponse.class);
+                    .get();
         }
-        catch (ClientHandlerException e) {
-            if (e.getCause().getMessage().equals("Connection timed out")
-                    || e.getCause().getMessage().equals("Connection refused")
-                    || e.getCause().getMessage().equals("Invalid Http response")) {
-                throw new ConnectException("Could not connect to " + resource);
-            }
-            e.printStackTrace();
-            throw new RuntimeException("\nRange: " + Integer.toString(startByte) + "-" + Integer.toString(endByte) + "\nGET " + resource + " HTTP 1.1");
+        catch (Exception e) {
+            throw new ConnectException("Could not connect to " + resource + "\n\t" + e.getCause().getMessage());
         }
 
-        InputStream inputStream = response.getEntityInputStream();
-        byte[] blockByteArray = IOUtils.toByteArray(inputStream);
+        byte[] blockByteArray = response.readEntity(byte[].class);
 
         Map headers = response.getHeaders();
         String headerString = "";

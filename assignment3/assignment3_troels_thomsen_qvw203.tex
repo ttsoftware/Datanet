@@ -28,6 +28,22 @@
 
 \documentclass{acm_proc_article-sp}
 
+\usepackage[font=scriptsize]{caption}
+
+\linespread{1.3}
+
+\lstset{language=Java,
+    basicstyle=\ttfamily\footnotesize,
+    keywordstyle=\color{blue}\ttfamily,
+    stringstyle=\color{green}\ttfamily,
+    commentstyle=\color{darkgreen}\ttfamily,
+    morekeywords={},
+    tabsize=4,
+    breaklines=true,
+    belowskip=1.5em,
+    prebreak=\raisebox{0ex}[0ex][0ex]{\space\ensuremath{\rhookswarrow}}
+}
+
 \begin{document}
 
 \title{Datanet}
@@ -82,11 +98,94 @@ Troels Thomsen\\
 \maketitle
 
 \begin{abstract}
-In this assignment we will describe our simple webserver implementation, which currently only supports GET requests, ignoring all incoming headers.
-We will see however, that our chosen structure is ideal for future improvement.
+In this assignment we will describe our simple Kascade peer implementation, its limitations, bottlenecks, usage and efficiency. We will further discuss general peer-to-peer communication in the context of the context of the Kascade network, and compare the performance of the Kascade network to that of downloading from a single source using regular HTTP.\\
+We will find that using a peer-to-peer network can potentially increase the bandwidth utilization by a factor of \textit{n}, where \textit{n} is the number of peers on the network.
 \end{abstract}
 
-\keywords{Java, HTTP, request, response, socket, TCP, header, peer} 
+\keywords{Java, network, MD5, HTTP, request, response, socket, TCP, UDP, multicast, broadcast, unicast, header, peer, kascade.} 
+
+\section{Peer implementation}
+We chose to implement our peer using the Java language. 
+The implementation uses the standard Java JAX-RS library in conjunction with the Jersey web service framework\footnote{\url{https://jersey.java.net/}} for handling HTTP connections, the Jackson object mapping library\footnote{\url{https://github.com/FasterXML/jackson/}} for mapping JSON, YAML or XML to real objects and the Apache Commons IO library for simple byte operations\footnote{\url{https://commons.apache.org/proper/commons-io/}}. 
+
+The peer implementation is divided into a client and server part. The client part handles translating the .kascade files into objects, contacting the tracker and asking for peers associated with given .kascade files and finally downloading, validating and correctly assembling the blocks.
+Each .kascade file is downloaded on a separate thread, enabling us to download multiple files simultaneously. We have not implemented downloading from each peer on its own thread, which of course would be even more efficient.
+
+Generally we keep each block in its own file. As such we have a directory system of /<trackhash>/<blockhash>, where blockhash is a file named after the blockhash which contains the block content. This is by far not the most flexible way to store the downloaded blocks, since it makes accessing special byte ranges difficult and potentially increases the disk usage. \\
+It would have been better to store the blocks in the same file, and use the seek command to correctly write/read blocks to their correct position in the file. We thought this would be too difficult however, so we chose the simpler solution.
+
+\begin{lstlisting}[caption=Code to validate the hashsum of a downloaded block]
+public boolean validateBlock(
+            byte[] blockcontent, 
+            String blockhash) 
+    throws NoSuchAlgorithmException, UnsupportedEncodingException {
+
+    MessageDigest md = 
+      MessageDigest.getInstance("MD5");
+    byte[] hashbytes = 
+      md.digest(blockcontent);
+
+    BigInteger hashBits = 
+      new BigInteger(1, hashbytes);
+    String hashtext = 
+      hashBits.toString(16);
+    while (hashtext.length() < 32) {
+        hashtext = "0" + hashtext;
+    }
+    return blockhash.equals(hashtext);
+}
+\end{lstlisting}
+
+\onecolumn
+
+The server part of the implementation simply listens for incoming connections on the given port and the path /<trackhash>. This basically means that any incoming GET requests on the port will be handled, with the only exception being a GET request for the root path /.
+
+If the incoming request asks for a file located in a predefined folder on the filesystem, and has a valid range for the blocksize of the give file, the server responds with the actual block content. Note here that an obvious bottleneck is that we are not able to respond with blocksizes different from the one specified in the .kascade file, even if we might have the specified range of bytes.
+
+
+\begin{lstlisting}[caption=The PeerServlet class responsible for handling incoming requests]
+package servlet;
+import ...
+
+@Path("/{trackhash}")
+public class PeerServlet {
+
+    @GET
+    @Produces("application/octet-stream")
+    public Response responseBlock(@PathParam("trackhash") String trackhash,
+                                @HeaderParam("Range") String range)
+            throws IOException {
+        String[] ranges = range.substring(6).split("-");
+        int rangeMin = Integer.parseInt(ranges[0]);
+        int rangeMax = Integer.parseInt(ranges[1]);
+
+        File[] files = new File("/var/www/shared/hashes").listFiles();
+        for (File file : files) {
+            if (file.isDirectory() && file.getName().equals(trackhash)) {
+                KascadeParser kascadeParser = new KascadeParser("/var/www/shared/kascades");
+                ArrayList<KascadeFile> kascadeFiles = kascadeParser.getFiles();
+                for (KascadeFile kascadeFile : kascadeFiles) {
+                    if (kascadeFile.getTrackhash().equals(file.getName())) {
+                        int blocksize = kascadeFile.getBlocksize();
+                        if (blocksize == (rangeMax - rangeMin)+1) {
+                            int blockIndex = rangeMin / blocksize;
+                            String blockFilename = kascadeFile.getBlockhashes()[blockIndex];
+                            File blockFile = new File("/var/www/shared/hashes/" + file.getName() + "/" + blockFilename);
+                            if (blockFile.exists()) {
+                                FileInputStream inputStream = new FileInputStream(blockFile);
+                                return Response.status(206).entity(IOUtils.toByteArray(inputStream)).build();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return Response.status(404).entity("404 - file not found.").build();
+    }
+}
+\end{lstlisting}
+
+\twocolumn
 
 \section{Theory}
 
@@ -108,14 +207,867 @@ The amount of communication between the tracker and the client is relatively sma
 
 Futhermore the HTTP protocol is widely known and supported, and is thus much easier to implement in almost any language, since there exists countless HTTP libraries. 
 
-Because of these two factors, there is no obvious reason to to choose HTTP.
+Because of these two factors, there is no obvious reason not to choose HTTP.
 
 \subsection{HTTP as a choice for peer communication}
+Given the relatively large amount of overhead associated with HTTP requests, it is very likely that a customized protocol would be more efficient at handling the actual peer-to-peer transmissions.
+This would allow tighter data compression and much smaller headers, which would be very beneficial for smaller block sizes and large files.
 
+\subsection{Multicast and broadcast}
+Since broadcast operations are performed on all nodes on the network, it is not recommended in our case. Each peer only want to receive data associated with kascade files which it possesses.
+
+Multicast on the other hand could in theory be very beneficial for a filesharing network, since the same packets could be distributed much more efficiently to several network nodes. We can imagine all peers subscribing to a multicast group, and then receive and transmit data over this channel in a many-to-many way.
+This behaviour is in fact what we simulate with our kascade network, since every peer can transmit data to every other peer (much less efficiently however).
+
+The downside however, is that TCP only supports unicast, and thus protocol for the peer communication would have to be implemented using UDP. As described above this introduces some problems inherent with UDP, such as lack of error and ordering checking. 
+
+\subsection{Hidden peers}
+When a peer is hidden behind a firewall or a symmetric NAT, it becomes impossible for other peers to connect directly to the given peer. In this case we need to introduce a third-party service which can forward data to our hidden peer.
+
+One such service is a TURN server. TURN is an abbreviation for \textbf{T}raversal \textbf{U}sing \textbf{R}elays around \textbf{N}AT, and is a protocol which enables the sort of forwarding we need in this case.
+In short terms the hidden peer connects to the TURN server, leaving the connection open and reconnecting on timeout. The hidden peer then submits its IP/port combination, which it holds on the TURN server, to the tracker.
+Now when other peers wish to access the hidden peer, they will connect to the TURN server, which in turn will forward the request/response to/from the hidden peer.
 
 \section{Experiments}
 In the following experiments we will uncover the effectiveness of the kascade network.
 
-\subsection{•}
+Unfortunately we unable to perform real-world experiments, due to the fact that no peers were online on the afternoon monday June 2nd when this report was written.
+
+We can however try speculate on the outcome of the experiments described in the assignment.
+
+\subsection{Kascade vs regular HTTP}
+Using our implementation, we would expect the Kascade file to be downloaded at just about the same rate as the regular HTTP download. This is due to the fact, that we do not download from different peers simultaneously but rather one at a time. In an optimal solution however, we would expect the Kascade network to be significantly faster, due to the fact that it enables us to utilize several different connections at once, thereby increasing the bandwidth utilization. 
+
+\subsection{Peak bandwidth}
+We would expect the bandwidth usage to be somewhat linear in the case of regular HTTP, since the download is limited entirely by the capabilities of the client, the single server and the network route to the single server.\\
+In the case of an optimal Kascade peer solution, we would expect the peak bandwidth usage to occur, when we are downloading from the largest possible number of peers for the given file. The more peers we can download from simultaneously, the more bandwidth we can utilize, since we are no longer limited by a single connection and the capacity of that connection.
+
+\subsection{CPU usage}
+In the case of regular HTTP, we would expect very limited CPU usage, since we are using a single thread with a relatively small number of instructions. \\
+We would on the other hand expect \textit{n} times the amount of CPU usage for the Kascade network, where n is the number of peers/threads.
+
+We do not consider this a limiting factor, since modern CPUs are optimized towards multithreaded performance, and thus the real performance impact should be minimal or impossible for the user to detect.
+
+\subsection{Blocksize and network utilization}
+We did perform this experiment somewhat while testing the code. While we do not have the exact results, it is clear that downloading the \textit{bbb\_sunflower\_1080p\_60fps\_normal.mp4} using 1024kb block sizes, versus 512kb block sizes made a clear difference. 
+
+Downloading the 512kb blocks required double the amount of requests, which increased the total time it took to download the file. This is due to the fact that TCP requires several requests in order to transmit the packets correctly, adding significant overhead. Especially over a fast connection, where the time it takes to actually transmit the data is very small, and where the time it takes to perform several handshakes may be the limiting factor.
+Even if our code had utilized multi-threaded peer downloading better, small blocksizes would still slow down the network.
+
+\section{Bottlenecks}
+Our implementation has the clear bottleneck that it is unable to download from multiple peers simultaneously, and thus does not utilize the network to its full potential.\\
+As previously mentioned we do not store and assemble the blocks in the most efficient manner. We could achieve more flexibility by storing the blocks in the same file instead of one file per block.
+
+Another limiting factor is the lacking ability for peers to unsubscribe from the tracker. When going through a list of peers, it is very time consuming to try each one of them, only to find that half of them are offline. 
+
+One could also potentially increase the efficiency of the network, by switching from HTTP to a more lightweight or even a custom protocol for the peer-to-peer communication. 
+
+\section{Conclusion}
+We may conclude that using a peer-to-peer network, even a suboptimal one such as the kascade network, can potentially increase the bandwidth utilization by a factor \textit{n}, where \textit{n} is the number of peers.\\
+In the worst-case scenario however, the network does not guarantee \textbf{any} performance, and may leave us without the ability to receive any data at all. 
+
+\section{Acknowledgements}
+The peer implementation was made in conjunction with Allan Nielsen (jcl187) and Troels Kamp Leskes (blr156). 
+
+\onecolumn
+
+\appendix
+
+\section{Code}
+The full source code can be found for easier browsing at \url{https://github.com/ttsoftware/Datanet/tree/master/Kascade}
+
+\subsection{Main.java}
+\begin{lstlisting}
+import client.Client;
+import file.KascadeFile;
+import file.parser.KascadeParser;
+import servlet.PeerListener;
+
+import java.io.File;
+import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.Date;
+
+public class Main {
+
+    static int port = 6666;
+
+    public static void main(String[] args) throws IOException, NoSuchAlgorithmException, InterruptedException {
+
+        Thread listeningThread = new Thread(new PeerListener(port));
+        listeningThread.start();
+
+        download();
+    }
+
+    public static void download() throws IOException, NoSuchAlgorithmException, InterruptedException {
+
+        KascadeParser kascadeParser = new KascadeParser("/var/www/shared/kascades");
+        ArrayList<KascadeFile> files = kascadeParser.getFiles();
+
+        for (KascadeFile file : files) {
+
+            Timestamp time = new Timestamp(new Date().getTime());
+            System.out.println(time + ": Downloading file:" + file.getFilename());
+
+            File directory = new File("/var/www/shared/hashes/" + file.getTrackhash());
+
+            if (!directory.exists()) {
+                if (!directory.mkdir()) {
+                    continue; // unable to create directory for blocks
+                }
+                if (directory.setReadable(true)) {
+                    if (!directory.setWritable(true)) {
+                        continue;
+                    }
+                }
+                else {
+                    continue;
+                }
+            }
+
+            Thread downloadThread = new Thread(new Client(port, file));
+            downloadThread.start();
+        }
+    }
+}
+\end{lstlisting}
+
+\subsection{Client.java}
+\begin{lstlisting}
+package client;
+
+import file.KascadeFile;
+
+import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.Date;
+
+public class Client implements Runnable {
+
+    private int port;
+    private KascadeFile file;
+
+    @Override
+    public void run() {
+
+        try {
+            TrackerService trackerService = new TrackerService(getPort());
+            ArrayList<Peer> peers = trackerService.getPeers(getFile());
+
+            System.out.println("Found " + peers.size() + " peers.");
+
+            PeerService peerService = new PeerService();
+            peerService.downloadBlocks(peers, getFile());
+
+            boolean success = file.assemble();
+            if (success) {
+                Timestamp time = new Timestamp(new Date().getTime());
+                System.out.println(time + ": File " + file.getFilename() + " succesfully downloaded.");
+            }
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public Client(int port, KascadeFile file) {
+        this.port = port;
+        this.file = file;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
+
+    public KascadeFile getFile() {
+        return file;
+    }
+
+    public void setFile(KascadeFile file) {
+        this.file = file;
+    }
+}
+\end{lstlisting}
+
+\subsection{Peer.java}
+\begin{lstlisting}
+package client;
+
+import file.KascadeFile;
+
+import java.util.HashMap;
+
+public class Peer {
+
+    private String ip;
+    private String updated;
+    private String blocks;
+    private int port;
+    private boolean feeder;
+
+    /**
+     * Returns the starting bytes in the byte ranges we want to download.
+     *
+     * @param file
+     * @return ArrayList
+     */
+    public HashMap<String, Integer> decodeBlocks(KascadeFile file) {
+
+        int blockcount = file.getBlockhashes().length;
+        String blocks = getBlocks();
+
+        String blockString = "";
+        for (int i = 0; i < blocks.length(); i += 2) {
+            String blockByte = blocks.substring(i, i+2);
+            String byteBlock = Integer.toBinaryString(Integer.valueOf(blockByte, 16));
+
+            if (byteBlock.equals("0")) {
+                blockString += "00000000";
+            }
+            else {
+                blockString += byteBlock;
+            }
+        }
+
+        if (blockString.length() > blockcount) {
+            blockString = blockString.substring(0, blockcount); // remove trailing 0's
+        }
+        else {
+            // append trailing 0's
+            while (blockString.length() < blockcount) {
+                blockString += "0";
+            }
+        }
+
+        char[] peerBlocks = blockString.toCharArray();
+        char[] existingBlocks = file.getBinaryBlocks().toCharArray();
+
+        HashMap<String, Integer> startingBytes = new HashMap<String, Integer>();
+        for (int i = 0; i < blockcount; i++) {
+            if (peerBlocks[i] == '1' && existingBlocks.length == 0) {
+                startingBytes.put(file.getBlockhashes()[i], i * file.getBlocksize());
+            }
+            else if (peerBlocks[i] == '1' && existingBlocks[i] == '0') {
+                // we should request this block.
+                // this block must be located at i * blocksize
+                startingBytes.put(file.getBlockhashes()[i], i * file.getBlocksize());
+            }
+        }
+
+        return startingBytes;
+    }
+
+    public String getIp() {
+        return ip;
+    }
+
+    public void setIp(String ip) {
+        this.ip = ip;
+    }
+
+    public String getUpdated() {
+        return updated;
+    }
+
+    public void setUpdated(String updated) {
+        this.updated = updated;
+    }
+
+    public String getBlocks() {
+        return blocks;
+    }
+
+    public void setBlocks(String blocks) {
+        this.blocks = blocks;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
+
+    public boolean isFeeder() {
+        return feeder;
+    }
+
+    public void setFeeder(boolean feeder) {
+        this.feeder = feeder;
+    }
+}
+\end{lstlisting}
+
+\subsection{PeerService.java}
+\begin{lstlisting}
+package client;
+
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientHandlerException;
+import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.WebResource;
+import file.KascadeFile;
+import org.apache.commons.io.IOUtils;
+
+import java.io.*;
+import java.math.BigInteger;
+import java.net.ConnectException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+
+public class PeerService {
+
+    public boolean validateBlock(byte[] blockcontent, String blockhash) throws NoSuchAlgorithmException, UnsupportedEncodingException {
+
+        MessageDigest md = MessageDigest.getInstance("MD5");
+        byte[] hashbytes = md.digest(blockcontent);
+
+        BigInteger hashBits = new BigInteger(1, hashbytes);
+        String hashtext = hashBits.toString(16);
+        while (hashtext.length() < 32) { // prefix with 0's to ensure correct length
+            hashtext = "0" + hashtext;
+        }
+
+        return blockhash.equals(hashtext);
+    }
+
+    public void downloadBlocks(ArrayList<Peer> peers, KascadeFile file) throws IOException, NoSuchAlgorithmException {
+
+        for (Peer peer : peers) {
+            HashMap<String, Integer> peerBlockStartingBytes = peer.decodeBlocks(file);
+
+            if (peerBlockStartingBytes.size() > 0) {
+
+                System.out.println("Trying " + peerBlockStartingBytes.size() + " blocks from peer " + peer.getIp() + ":" + peer.getPort());
+
+                for (Map.Entry<String, Integer> blockEntry : peerBlockStartingBytes.entrySet()) {
+
+                    byte[] blockContent = new byte[]{};
+                    try {
+                        downloadBlock(peer, file, blockEntry.getValue());
+                    }
+                    catch (ConnectException e) {
+                        System.out.println(e.getMessage());
+                        break; // try next peer
+                    }
+
+                    if (blockContent.length > 0 && validateBlock(blockContent, blockEntry.getKey())) {
+
+                        System.out.println("\tRecieved block " + blockEntry.getKey());
+
+                        FileOutputStream outputStream = new FileOutputStream("/var/www/shared/hashes/" + file.getTrackhash() + "/" + blockEntry.getKey());
+                        outputStream.write(blockContent);
+                        outputStream.close();
+                    }
+                }
+            }
+        }
+    }
+
+    public byte[] downloadBlock(Peer peer, KascadeFile file, int startByte) throws IOException {
+
+        String resource = "http://" + peer.getIp() + ":" + peer.getPort() + "/" + file.getTrackhash();
+
+        Client client = Client.create();
+        WebResource webResource = client.resource(resource);
+
+        int endByte = startByte + file.getBlocksize() - 1;
+        if (endByte >= file.getFilesize()) {
+            endByte = file.getFilesize() - 1;
+        }
+
+        ClientResponse response;
+        try {
+            response = webResource
+                    .header("Range", "bytes=" + Integer.toString(startByte) + "-" + Integer.toString(endByte))
+                    .type("text/plain")
+                    .get(ClientResponse.class);
+        }
+        catch (ClientHandlerException e) {
+            throw new ConnectException("Could not connect to " + resource);
+        }
+
+        InputStream inputStream = response.getEntityInputStream();
+        byte[] blockByteArray = IOUtils.toByteArray(inputStream);
+
+        Map headers = response.getHeaders();
+        String headerString = "";
+        for (Object header : headers.keySet()) {
+            headerString += "\n" + header + " : " + headers.get(header);
+        }
+
+        switch (response.getStatus()) {
+            case 206:
+                // recieved block succesfully.
+                return blockByteArray;
+            case 400:
+                // block not found, try next peer.
+                return new byte[]{};
+            default:
+                throw new RuntimeException("\nRange: " + Integer.toString(startByte) + "-" + Integer.toString(endByte) +
+                                           "\nGET " + resource + " HTTP 1.1: " +
+                                           response.getStatus() + headerString);
+        }
+    }
+}
+\end{lstlisting}
+
+\subsection{TrackerService.java}
+\begin{lstlisting}
+package client;
+
+
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientResponse;
+import com.sun.jersey.api.client.WebResource;
+import file.KascadeFile;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import static java.lang.Thread.sleep;
+
+public class TrackerService {
+
+    private int port;
+
+    public TrackerService(int port) {
+        this.port = port;
+    }
+
+    public ArrayList<Peer> getPeers(KascadeFile kascadeFile) throws IOException, InterruptedException {
+
+        String input = "port=" + Integer.toString(getPort()) + "&blocks=" + kascadeFile.getBlocks();
+
+        Client client = Client.create();
+
+        WebResource webResource = client.resource(kascadeFile.getTracker());
+        ClientResponse response = webResource.type("application/x-www-form-urlencoded").post(ClientResponse.class, input);
+
+        String responseBody = response.getEntity(String.class);
+
+        Map headers = response.getHeaders();
+        String headerString = "";
+        for (Object header : headers.keySet()) {
+            headerString += "\n" + header + " : " + headers.get(header);
+        }
+
+        switch (response.getStatus()) {
+            case 403:
+                sleep(60);
+                break;
+            case 200:
+                break;
+            default:
+                throw new RuntimeException("\nInput: " + input + "\nHTTP status: " + response.getStatus() + "\n" + headerString + "\n" + responseBody);
+        }
+
+        ObjectMapper mapper = new ObjectMapper();
+        return mapper.readValue(responseBody, new TypeReference<List<Peer>>(){});
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
+}
+\end{lstlisting}
+
+\subsection{KascadeParser.java}
+\begin{lstlisting}
+package file.parser;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import file.KascadeFile;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+
+public class KascadeParser {
+
+    private String path;
+
+    public KascadeParser(String path) {
+        this.path = path;
+    }
+
+    public ArrayList<KascadeFile> getFiles() throws IOException {
+        ArrayList<KascadeFile> files = new ArrayList<KascadeFile>();
+
+        for (File file : arrayOfKascadeFiles()) {
+            KascadeFile fileObject = fileToKascade(file.getAbsolutePath());
+            if (fileObject instanceof KascadeFile) {
+                files.add(fileObject);
+            }
+        }
+
+        return files;
+    }
+
+    public ArrayList<File> arrayOfKascadeFiles() {
+        ArrayList<File> results = new ArrayList<File>();
+        File[] files = new File(getPath()).listFiles();
+
+        for (File file : files) {
+            if (file.getName().endsWith(".kascade")) {
+                results.add(file);
+            }
+        }
+
+        return results;
+    }
+
+    public KascadeFile fileToKascade(String filepath) throws IOException {
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            return mapper.readValue(new File(filepath), KascadeFile.class);
+        }
+        catch (IOException e) {
+            return null;
+        }
+    }
+
+    public String getPath() {
+        return path;
+    }
+
+    public void setPath(String path) {
+        this.path = path;
+    }
+}
+\end{lstlisting}
+
+\subsection{KascadeFile.java}
+\begin{lstlisting}
+package file;
+
+import org.apache.commons.io.IOUtils;
+
+import java.io.*;
+import java.math.BigInteger;
+import java.util.Arrays;
+
+import static org.junit.Assert.assertEquals;
+
+public class KascadeFile {
+
+    private String tracker;
+    private String trackhash;
+
+    private String filepath;
+    private String filename;
+    private String filehash;
+    private int filesize;
+
+    private String blocks = "";
+    private int blocksize;
+    private String[] blockhashes;
+
+    public KascadeFile() {
+    }
+
+    public KascadeFile(String tracker, String filepath, String filename, String filehash, int filesize, int blocksize) {
+        this.tracker = tracker;
+        this.filepath = filepath;
+        this.filename = filename;
+        this.filehash = filehash;
+        this.filesize = filesize;
+        this.blocksize = blocksize;
+    }
+
+    /**
+     * If true is returned, the file was succesfully assembled.
+     * If false is returned, we do not have all the nessescary blocks.
+     *
+     * @return boolean
+     * @throws IOException
+     */
+    public boolean assemble() throws IOException {
+
+        String[] blockhashes = getBlockhashes();
+        String binaryBlocks = getBinaryBlocks();
+
+        boolean isComplete = true;
+        for (char blockExists : binaryBlocks.toCharArray()) {
+            if (blockExists == '0') {
+                isComplete = false;
+            }
+        }
+
+        if (isComplete) {
+
+            FileOutputStream outputStream = new FileOutputStream("/var/www/shared/files/" + getFilename());
+            // we now want to assemble the file
+            for (String blockhash : blockhashes) {
+
+                File blockfile = new File("/var/www/shared/hashes/" + getTrackhash() + "/" + blockhash);
+                if (blockfile.exists()) {
+                    FileInputStream inputStream = new FileInputStream(blockfile);
+                    byte[] blockByteArray = IOUtils.toByteArray(inputStream);
+                    outputStream.write(blockByteArray);
+                }
+                else {
+                    return false;
+                }
+            }
+            outputStream.close();
+        }
+
+
+
+        return isComplete;
+    }
+
+    public String getTracker() {
+        return tracker;
+    }
+
+    public void setTracker(String tracker) {
+        this.tracker = tracker;
+    }
+
+    public String getTrackhash() {
+        return trackhash;
+    }
+
+    public void setTrackhash(String trackhash) {
+        this.trackhash = trackhash;
+    }
+
+    public String getFilepath() {
+        return filepath;
+    }
+
+    public void setFilepath(String filepath) {
+        this.filepath = filepath;
+    }
+
+    public String getFilename() {
+        return filename;
+    }
+
+    public void setFilename(String filename) {
+        this.filename = filename;
+    }
+
+    public String getFilehash() {
+        return filehash;
+    }
+
+    public void setFilehash(String filehash) {
+        this.filehash = filehash;
+    }
+
+    public int getFilesize() {
+        return filesize;
+    }
+
+    public void setFilesize(int filesize) {
+        this.filesize = filesize;
+    }
+
+    public String getBinaryBlocks() {
+        int blockcount = getBlockhashes().length;
+
+        File[] blockfiles = new File("/var/www/shared/hashes/" + getTrackhash()).listFiles();
+
+        String blocks = "";
+        if (blockfiles != null && blockfiles.length > 0) {
+            for (String blockhash : blockhashes) {
+                blocks += "0";
+                for (File blockfile : blockfiles) {
+                    if (blockfile.getName().equals(blockhash)) {
+                        blocks = blocks.substring(0, blocks.length() - 1);
+                        blocks += "1";
+                    }
+                }
+            }
+        }
+
+        return blocks;
+    }
+
+    public String getBlocks() {
+
+        int blockcount = getBlockhashes().length;
+        int bytecount = (int) Math.ceil(blockcount / 8.0);
+
+        File[] blockfiles = new File("/var/www/shared/hashes/" + getTrackhash()).listFiles();
+
+        String[] blocks = new String[blockcount];
+        for (int i = 0; i < blockcount; i++) {
+            blocks[i] = "0";
+        }
+
+        if (blockfiles != null && blockfiles.length > 0) {
+            for (int i = 0; i < blockhashes.length; i++) {
+                for (File blockfile : blockfiles) {
+                    if (blockfile.getName().equals(blockhashes[i])) {
+                        blocks[i] = "1";
+                    }
+                }
+            }
+        }
+
+        String hexBlocks = "";
+        for (int i = 0; i < bytecount; i++) {
+            String blockString = "";
+            for (int j = 0; j < 8; j++) {
+                if ((i + j) < blockcount) {
+                    blockString += blocks[i + j];
+                }
+            }
+
+            String hexVal = Integer.toHexString(Integer.valueOf(blockString, 2));
+            if (hexVal.length() == 1) {
+                hexVal = "0" + hexVal;
+            }
+
+            hexBlocks += hexVal;
+        }
+
+        return hexBlocks;
+    }
+
+    public void setBlocks(String blocks) {
+        this.blocks = blocks;
+    }
+
+    public int getBlocksize() {
+        return blocksize;
+    }
+
+    public void setBlocksize(int blocksize) {
+        this.blocksize = blocksize;
+    }
+
+    public String[] getBlockhashes() {
+        return blockhashes;
+    }
+
+    public void setBlockhashes(String[] blockhashes) {
+        this.blockhashes = blockhashes;
+    }
+}
+\end{lstlisting}
+
+\subsection{PeerListener.java}
+\begin{lstlisting}
+package servlet;
+
+import com.sun.jersey.api.container.httpserver.HttpServerFactory;
+import com.sun.net.httpserver.HttpServer;
+
+import java.io.IOException;
+
+public class PeerListener implements Runnable {
+
+    private int port;
+
+    public PeerListener(int port) {
+        this.port = port;
+    }
+
+    @Override
+    public void run() {
+        // http://localhost:6666/4ad2b83af9573f2074e70ead5b23e9dea1786b4293e6726f88b8e34f1b4a8942
+        HttpServer server;
+        try {
+            server = HttpServerFactory.create("http://127.0.0.1:" + port + "/");
+            server.start();
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public void setPort(int port) {
+        this.port = port;
+    }
+}
+\end{lstlisting}
+
+\subsection{PeerServlet.java}
+\begin{lstlisting}package servlet;
+import file.KascadeFile;
+import file.parser.KascadeParser;
+import org.apache.commons.io.IOUtils;
+
+import javax.ws.rs.*;
+import javax.ws.rs.core.Response;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+
+@Path("/{trackhash}")
+public class PeerServlet {
+
+    @GET
+    @Produces("application/octet-stream")
+    public Response responseBlock(@PathParam("trackhash") String trackhash,
+                                @HeaderParam("Range") String range)
+            throws IOException {
+
+        String[] ranges = range.substring(6).split("-");
+        int rangeMin = Integer.parseInt(ranges[0]);
+        int rangeMax = Integer.parseInt(ranges[1]);
+
+        File[] files = new File("/var/www/shared/hashes").listFiles();
+
+        for (File file : files) {
+            if (file.isDirectory() && file.getName().equals(trackhash)) {
+
+                KascadeParser kascadeParser = new KascadeParser("/var/www/shared/kascades");
+                ArrayList<KascadeFile> kascadeFiles = kascadeParser.getFiles();
+
+                for (KascadeFile kascadeFile : kascadeFiles) {
+                    if (kascadeFile.getTrackhash().equals(file.getName())) {
+                        int blocksize = kascadeFile.getBlocksize();
+
+                        if (blocksize == (rangeMax - rangeMin)+1) {
+                            int blockIndex = rangeMin / blocksize;
+                            String blockFilename = kascadeFile.getBlockhashes()[blockIndex];
+
+                            File blockFile = new File("/var/www/shared/hashes/" + file.getName() + "/" + blockFilename);
+                            if (blockFile.exists()) {
+
+                                FileInputStream inputStream = new FileInputStream(blockFile);
+                                return Response.status(206).entity(IOUtils.toByteArray(inputStream)).build();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return Response.status(404).entity("404 - file not found.").build();
+    }
+}
+\end{lstlisting}
 
 \end{document}

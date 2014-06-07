@@ -1,9 +1,7 @@
+import client.PeerClient;
 import file.KascadeFile;
 import file.parser.KascadeParser;
-import client.Peer;
-import client.KascadeFileDownloader;
-import servlet.PeerListener;
-import client.TrackerService;
+import server.PeerListener;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,15 +10,14 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
 
-public class
-        Main {
+public class Main {
 
     static int port = 6666;
 
     public static void main(String[] args) throws IOException, NoSuchAlgorithmException, InterruptedException {
 
         Thread listeningThread = new Thread(new PeerListener(port));
-        //listeningThread.start();
+        listeningThread.start();
 
         download();
     }
@@ -51,12 +48,7 @@ public class
                 }
             }
 
-            TrackerService trackerService = new TrackerService(port);
-            ArrayList<Peer> peers = trackerService.getPeers(file);
-
-            System.out.println("Found " + peers.size() + " peers.");
-
-            Thread downloadThread = new Thread(new KascadeFileDownloader(peers, file));
+            Thread downloadThread = new Thread(new PeerClient(port, file));
             downloadThread.start();
         }
     }

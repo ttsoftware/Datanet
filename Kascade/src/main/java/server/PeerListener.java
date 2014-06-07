@@ -1,9 +1,11 @@
-package servlet;
+package server;
 
-import com.sun.jersey.api.container.httpserver.HttpServerFactory;
 import com.sun.net.httpserver.HttpServer;
+import org.glassfish.jersey.jdkhttp.JdkHttpServerFactory;
+import org.glassfish.jersey.server.ResourceConfig;
 
-import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 
 public class PeerListener implements Runnable {
 
@@ -16,13 +18,12 @@ public class PeerListener implements Runnable {
     @Override
     public void run() {
         // http://localhost:6666/4ad2b83af9573f2074e70ead5b23e9dea1786b4293e6726f88b8e34f1b4a8942
-        HttpServer server;
         try {
-            server = HttpServerFactory.create("http://127.0.0.1:" + port + "/");
-            server.start();
+            ResourceConfig rc = new ResourceConfig().register(PeerServlet.class);
+            HttpServer server = JdkHttpServerFactory.createHttpServer(new URI("http://127.0.0.1:" + port + "/"), rc);
         }
-        catch (IOException e) {
-            e.printStackTrace();
+        catch (URISyntaxException ex) {
+            ex.printStackTrace();
         }
     }
 
