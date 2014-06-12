@@ -2,6 +2,7 @@ import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.jersey.filter.LoggingFilter;
 import org.glassfish.jersey.grizzly2.httpserver.GrizzlyHttpServerFactory;
 import org.glassfish.jersey.server.ResourceConfig;
+import protocol.GrizzlyExceptionMapper;
 
 import javax.ws.rs.core.UriBuilder;
 import java.net.URI;
@@ -14,7 +15,8 @@ public class Main {
         URI uri = UriBuilder.fromUri("http://localhost/").port(8080).build();
         ResourceConfig rc = new ResourceConfig()
                 .packages("protocol")
-                .registerInstances(new LoggingFilter(Logger.getLogger(Main.class.getName()), true));
+                .registerInstances(new LoggingFilter(Logger.getLogger(Main.class.getName()), true))
+                .register(GrizzlyExceptionMapper.class);
 
         HttpServer server = GrizzlyHttpServerFactory.createHttpServer(uri, rc);
         System.in.read();
